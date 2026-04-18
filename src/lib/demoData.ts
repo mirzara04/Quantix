@@ -8,6 +8,8 @@ export const DEMO_PROFILE: StudentProfile = {
   skills: ['Python', 'Machine Learning', 'React', 'Node.js', 'Data Analysis', 'TensorFlow', 'SQL'],
   financial_need: true,
   location_preference: 'Remote / Bangalore',
+  past_experience: 'Software Engineering Intern at Local Startup, built backend APIs with Node.js.',
+  preferred_types: ['internship', 'fellowship', 'scholarship'],
 };
 
 export const DEMO_EMAIL_TEXT = `

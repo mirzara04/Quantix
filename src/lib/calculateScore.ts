@@ -146,13 +146,26 @@ export function calculateScore(
 
   // --- Plain-English rank reason ---
   const reasons: string[] = [];
-  if (urgencyScore > 0) reasons.push(urgencyReason);
-  reasons.push(fitReason);
-  if (extracted.requires_financial_need && profile.financial_need) reasons.push('financial need met');
-  if (completenessScore < 60) reasons.push(`low info quality (${completenessReason})`);
+  if (extracted.requires_financial_need && profile.financial_need) {
+    reasons.push('High Financial Need Match');
+  }
+  
+  if (urgencyScore > 0) {
+    const rawUrgency = urgencyReason.split(' — ')[0];
+    reasons.push(rawUrgency);
+  }
+
+  if (opportunityKeywords.length > 0) {
+    reasons.push(`${matchedCount}/${opportunityKeywords.length} skills matched`);
+  }
+
+  reasons.push(`Semester ${profile.semester} Eligibility`);
+
+  const finalScore = Math.min(100, total);
+  const formattedReason = `Match: ${finalScore}% — ${reasons.join(' + ')}`;
 
   return {
-    score: Math.min(100, total),
+    score: finalScore,
     breakdown: {
       urgency: urgencyScore,
       fit: fitScore,
@@ -165,7 +178,7 @@ export function calculateScore(
       completeness_reason: completenessReason,
     },
     is_eligible: true,
-    rank_reason: reasons.join(' · '),
+    rank_reason: formattedReason,
     eligibility_gap: null,
   };
 }

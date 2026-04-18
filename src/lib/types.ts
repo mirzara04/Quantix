@@ -7,6 +7,8 @@ export interface StudentProfile {
   skills: string[];
   financial_need: boolean;
   location_preference: string;
+  past_experience?: string;
+  preferred_types?: string[];
 }
 
 export interface Opportunity {
@@ -14,7 +16,7 @@ export interface Opportunity {
   batch_id?: string;
   title: string;
   organization: string;
-  type: 'scholarship' | 'internship' | 'fellowship' | 'competition' | 'grant' | 'spam' | 'unknown';
+  type: 'scholarship' | 'internship' | 'fellowship' | 'competition' | 'grant' | 'admission' | 'spam' | 'unknown';
   deadline?: string | null;
   stipend: string;
   min_cgpa: number;

@@ -1,63 +1,58 @@
-'use client';
-
-import { useState } from 'react';
-import { X, ChevronRight, ChevronLeft, User, GraduationCap, Code2, MapPin, Check } from 'lucide-react';
+import { useState, useRef } from 'react';
 import { StudentProfile } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { User, Check, X } from 'lucide-react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
-const SKILL_OPTIONS = [
-  'Python', 'Java', 'C++', 'JavaScript', 'TypeScript', 'React', 'Node.js',
-  'Machine Learning', 'Deep Learning', 'TensorFlow', 'PyTorch', 'Data Analysis',
-  'SQL', 'MongoDB', 'PostgreSQL', 'Docker', 'Kubernetes', 'AWS', 'GCP', 'Azure',
-  'Research Methodology', 'Statistics', 'Blockchain', 'Computer Vision', 'NLP',
-  'Android Development', 'iOS Development', 'Flutter', 'DSA', 'Problem Solving',
-];
-
-const DEGREE_OPTIONS = [
-  'B.Tech Computer Science', 'B.Tech IT', 'B.Tech ECE', 'B.Tech EEE',
-  'B.Tech Mechanical', 'B.Tech Civil', 'B.Sc Computer Science',
-  'B.Sc Mathematics', 'M.Tech Computer Science', 'M.Tech IT',
-  'M.Sc Data Science', 'M.Sc AI/ML', 'MBA', 'BCA', 'MCA', 'PhD',
-];
-
-const LOCATION_OPTIONS = [
-  'Remote', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai',
-  'Pune', 'Kolkata', 'Ahmedabad', 'Remote / Bangalore', 'Remote / Mumbai',
-  'Pan India', 'Any',
-];
-
-const STEPS = [
-  { id: 0, label: 'Personal', icon: User },
-  { id: 1, label: 'Academic', icon: GraduationCap },
-  { id: 2, label: 'Skills', icon: Code2 },
-  { id: 3, label: 'Preferences', icon: MapPin },
-];
-
-interface ProfileModalProps {
+interface Props {
   profile: StudentProfile;
-  onSave: (profile: StudentProfile) => void;
+  onSave: (p: StudentProfile) => void;
   onClose: () => void;
 }
 
-export default function ProfileModal({ profile, onSave, onClose }: ProfileModalProps) {
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState<StudentProfile>({ ...profile });
+export default function ProfileModal({ profile: initialProfile, onSave, onClose }: Props) {
+  const [draft, setDraft] = useState<StudentProfile>(initialProfile);
+  const [isSaved, setIsSaved] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
-  const handleSkillToggle = (skill: string) => {
-    setForm((prev) => ({
-      ...prev,
-      skills: prev.skills.includes(skill)
-        ? prev.skills.filter((s) => s !== skill)
-        : [...prev.skills, skill],
-    }));
+  useGSAP(() => {
+    gsap.fromTo(containerRef.current, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+    gsap.fromTo(contentRef.current, 
+      { x: '100%' }, 
+      { x: '0%', duration: 0.4, ease: "power3.out" }
+    );
+  }, []);
+
+  const handleClose = () => {
+    gsap.to(contentRef.current, { x: '100%', duration: 0.3, ease: "power3.in" });
+    gsap.to(containerRef.current, { opacity: 0, duration: 0.3, onComplete: onClose });
   };
 
   const handleSave = () => {
-    onSave(form);
-    onClose();
+    setIsSaved(true);
+    onSave(draft);
+    setTimeout(() => {
+      handleClose();
+    }, 800);
+  };
+
+  const handleSkillsChange = (val: string) => {
+    const skills = val.split(',').map(s => s.trim()).filter(s => s !== '');
+    setDraft({ ...draft, skills });
+  };
+
+  const toggleType = (type: string) => {
+    const types = draft.preferred_types || [];
+    if (types.includes(type)) {
+      setDraft({ ...draft, preferred_types: types.filter(t => t !== type) });
+    } else {
+      setDraft({ ...draft, preferred_types: [...types, type] });
+    }
   };
 
   return (
+<<<<<<< HEAD
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-md" onClick={onClose} />
 
@@ -181,34 +176,70 @@ export default function ProfileModal({ profile, onSave, onClose }: ProfileModalP
           )}
 
           {step === 2 && (
+=======
+    <div ref={containerRef} className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm">
+      <div className="absolute inset-0 cursor-pointer" onClick={handleClose} />
+      
+      <div 
+        ref={contentRef}
+        className="relative w-full max-w-md h-full bg-[#0a0a0a] border-l border-white/10 flex flex-col shadow-2xl overflow-hidden translate-x-full"
+      >
+        <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center text-blue-500">
+              <User className="w-5 h-5" />
+            </div>
+>>>>>>> origin/talha
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-2">
-                Skills & Technologies
-                <span className="ml-2 text-cyan-400">{form.skills.length} selected</span>
-              </label>
-              <div className="flex flex-wrap gap-1.5 max-h-[260px] overflow-y-auto pr-1">
-                {SKILL_OPTIONS.map((skill) => {
-                  const selected = form.skills.includes(skill);
-                  return (
-                    <button
-                      key={skill}
-                      onClick={() => handleSkillToggle(skill)}
-                      className={cn(
-                        'px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-150',
-                        selected
-                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                          : 'bg-white/3 text-slate-400 border-white/8 hover:border-white/20 hover:text-slate-300'
-                      )}
-                    >
-                      {selected && <span className="mr-1">✓</span>}
-                      {skill}
-                    </button>
-                  );
-                })}
+              <h2 className="text-sm font-semibold tracking-wide text-white">Profile Context</h2>
+              <p className="text-xs text-white/50">Configure your pipeline vectors</p>
+            </div>
+          </div>
+          <button onClick={handleClose} className="p-2 text-white/50 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 custom-scrollbar">
+          
+          {/* Academic */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest">Academic Vector</h3>
+            <div className="flex flex-col gap-3">
+              <label className="text-xs text-white/70">Degree / Program</label>
+              <input 
+                type="text" 
+                value={draft.degree} 
+                onChange={(e) => setDraft({...draft, degree: e.target.value})}
+                className="w-full bg-[#000000] border border-white/10 rounded-md p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+              />
+              
+              <div className="flex gap-4">
+                <div className="flex-1 flex flex-col gap-3">
+                  <label className="text-xs text-white/70">Semester</label>
+                  <select 
+                    value={draft.semester}
+                    onChange={(e) => setDraft({...draft, semester: Number(e.target.value)})}
+                    className="w-full bg-[#000000] border border-white/10 rounded-md p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                  >
+                    {[1,2,3,4,5,6,7,8,9,10].map(s => <option key={s} value={s}>Sem {s}</option>)}
+                  </select>
+                </div>
+                <div className="flex-1 flex flex-col gap-3">
+                  <label className="text-xs text-white/70">CGPA</label>
+                  <input 
+                    type="number" 
+                    step="0.1" 
+                    value={draft.cgpa}
+                    onChange={(e) => setDraft({...draft, cgpa: Number(e.target.value)})}
+                    className="w-full bg-[#000000] border border-white/10 rounded-md p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
-          )}
+          </div>
 
+<<<<<<< HEAD
           {step === 3 && (
             <div className="space-y-4">
               <div>
@@ -217,20 +248,37 @@ export default function ProfileModal({ profile, onSave, onClose }: ProfileModalP
                   value={form.location_preference}
                   onChange={(e) => setForm({ ...form, location_preference: e.target.value })}
                   className="w-full bg-[#0a0a0f] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-orange-300/40 transition-colors"
+=======
+          <div className="h-px bg-white/5" />
+
+          {/* Context */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest">Environment Context</h3>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
+                <label className="text-xs text-white/70">Location Preference</label>
+                <select 
+                  value={draft.location_preference}
+                  onChange={(e) => setDraft({...draft, location_preference: e.target.value})}
+                  className="w-full bg-[#000000] border border-white/10 rounded-md p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none"
+>>>>>>> origin/talha
                 >
-                  {LOCATION_OPTIONS.map((l) => (
-                    <option key={l} value={l}>{l}</option>
-                  ))}
+                  <option value="Remote">Remote</option>
+                  <option value="Remote / Hybrid">Remote / Hybrid</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Any">Any</option>
                 </select>
               </div>
 
-              <div className="flex items-center justify-between p-3 glass-panel rounded-xl border border-white/5">
-                <div>
-                  <p className="text-sm font-medium text-white">Financial Need</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Enables need-based scholarship matching
-                  </p>
+              <div className="flex items-center justify-between bg-[#000000] border border-white/10 p-3 rounded-md cursor-pointer hover:border-white/20 transition-colors" onClick={() => setDraft({...draft, financial_need: !draft.financial_need})}>
+                <div className="flex flex-col">
+                  <span className="text-sm text-white">Financial Need Status</span>
+                  <span className="text-[10px] text-white/40">Boosts matching for need-based programs</span>
                 </div>
+                <div className={`w-8 h-4 rounded-full flex items-center transition-colors px-0.5 ${draft.financial_need ? 'bg-blue-600' : 'bg-white/20'}`}>
+                  <div className={`w-3 h-3 rounded-full bg-white transition-transform ${draft.financial_need ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+<<<<<<< HEAD
                 <button
                   onClick={() => setForm({ ...form, financial_need: !form.financial_need })}
                   className={cn(
@@ -245,20 +293,89 @@ export default function ProfileModal({ profile, onSave, onClose }: ProfileModalP
                     )}
                   />
                 </button>
+=======
+>>>>>>> origin/talha
               </div>
             </div>
-          )}
+          </div>
+
+          <div className="h-px bg-white/5" />
+
+          {/* Professional */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest">Professional Identity</h3>
+            
+            <div className="flex flex-col gap-3">
+              <label className="text-xs text-white/70">Skills (comma separated)</label>
+              <textarea 
+                value={draft.skills.join(', ')}
+                onChange={(e) => handleSkillsChange(e.target.value)}
+                className="w-full bg-[#000000] border border-white/10 rounded-md p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none min-h-[60px] resize-none"
+                placeholder="React, Python, Machine Learning..."
+              />
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <label className="text-xs text-white/70">Past Experience</label>
+              <textarea 
+                value={draft.past_experience || ''}
+                onChange={(e) => setDraft({...draft, past_experience: e.target.value})}
+                className="w-full bg-[#000000] border border-white/10 rounded-md p-2.5 text-sm text-white focus:border-blue-500 focus:outline-none min-h-[80px] resize-none"
+                placeholder="Describe your previous internships or roles..."
+              />
+            </div>
+          </div>
+
+          <div className="h-px bg-white/5" />
+
+          {/* Preferences */}
+          <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-medium text-white/40 uppercase tracking-widest">Target Categories</h3>
+            <div className="flex flex-wrap gap-2">
+              {['internship', 'scholarship', 'fellowship', 'competition', 'grant'].map(type => {
+                const isActive = (draft.preferred_types || []).includes(type);
+                return (
+                  <button
+                    key={type}
+                    onClick={() => toggleType(type)}
+                    className={`px-3 py-1.5 text-xs rounded-md border capitalize transition-colors ${
+                      isActive ? 'bg-blue-600/20 text-blue-500 border-blue-600/40' : 'bg-white/5 text-white/50 border-white/10 hover:border-white/30'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
         </div>
 
+<<<<<<< HEAD
         <div className="relative flex items-center justify-between px-6 py-4 border-t border-white/6 bg-white/[0.02]">
           <button
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={step === 0}
             className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors px-3 py-2 rounded-full hover:bg-white/5"
+=======
+        {/* Footer Actions */}
+        <div className="p-6 border-t border-white/10 bg-[#060606] flex gap-3">
+          <button 
+            onClick={handleClose}
+            className="flex-1 py-2.5 rounded-md text-sm font-medium text-white/60 bg-white/5 hover:bg-white/10 hover:text-white transition-colors"
+>>>>>>> origin/talha
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            Back
+            Discard
           </button>
+          <button 
+            onClick={handleSave}
+            className={`flex-[2] py-2.5 rounded-md text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+              isSaved ? 'bg-green-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            {isSaved ? <><Check className="w-4 h-4" /> Saved Successfully</> : 'Commit Configuration'}
+          </button>
+<<<<<<< HEAD
 
           {step < STEPS.length - 1 ? (
             <button
@@ -277,6 +394,8 @@ export default function ProfileModal({ profile, onSave, onClose }: ProfileModalP
               Save Profile
             </button>
           )}
+=======
+>>>>>>> origin/talha
         </div>
       </div>
     </div>
