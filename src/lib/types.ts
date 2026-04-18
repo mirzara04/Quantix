@@ -16,7 +16,7 @@ export interface Opportunity {
   batch_id?: string;
   title: string;
   organization: string;
-  type: 'scholarship' | 'internship' | 'fellowship' | 'competition' | 'grant' | 'spam' | 'unknown';
+  type: 'scholarship' | 'internship' | 'fellowship' | 'competition' | 'grant' | 'admission' | 'spam' | 'unknown';
   deadline?: string | null;
   stipend: string;
   min_cgpa: number;

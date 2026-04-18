@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Opportunity, StudentProfile } from '@/lib/types';
@@ -17,6 +17,8 @@ import ActionCenter from '@/components/checklist/ActionCenter';
 import LoadingScreen from '@/components/layout/LoadingScreen';
 
 gsap.registerPlugin(useGSAP);
+
+const FILTER_TABS = ['All', 'Scholarships', 'Internships', 'Fellowships', 'Competitions', 'Admissions'];
 
 function scoreAndSort(opps: Opportunity[], profile: StudentProfile) {
   return opps.map(raw => {
@@ -43,6 +45,8 @@ export default function DashboardPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  
+  const [activeTab, setActiveTab] = useState('All');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mainDashRef = useRef<HTMLDivElement>(null);
@@ -58,23 +62,31 @@ export default function DashboardPage() {
     }
   }, [isAppLoaded]);
 
-  // GSAP Stagger Entrance for Ranked Opportunities
+  // Derived Filter State
+  const filteredOpps = useMemo(() => {
+    if (activeTab === 'All') return opportunities;
+    const mappedType = activeTab.toLowerCase().replace(/s$/, ''); // e.g. "Scholarships" -> "scholarship"
+    return opportunities.filter(o => o.type.toLowerCase() === mappedType);
+  }, [opportunities, activeTab]);
+
+  // GSAP Stagger Entrance for Ranked Opportunities on filter change
   useGSAP(() => {
-    if (opportunities.length > 0 && !selectedOppId && listRef.current) {
+    if (filteredOpps.length > 0 && !selectedOppId && listRef.current) {
       const cards = gsap.utils.toArray('.opp-card-wrapper');
+      // Set to invisible then fade up
       gsap.fromTo(cards, 
-        { y: 30, opacity: 0 },
+        { y: 10, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.6,
+          duration: 0.5,
           stagger: 0.05,
-          ease: "power3.out",
+          ease: "power2.out",
           clearProps: "all" 
         }
       );
     }
-  }, [opportunities, selectedOppId]);
+  }, [filteredOpps, selectedOppId]);
 
   const handleScan = () => {
     setIsExtracting(true);
@@ -83,12 +95,12 @@ export default function DashboardPage() {
       setOpportunities(scored);
       setIsExtracting(false);
       setSelectedOppId(null);
+      setActiveTab('All');
     }, 1500);
   };
 
   const handleSaveProfile = (updated: StudentProfile) => {
     setProfile(updated);
-    // Real-time recalculation if opportunities exist
     if (opportunities.length > 0) {
       const rescored = scoreAndSort(opportunities, updated);
       setOpportunities(rescored);
@@ -132,7 +144,31 @@ export default function DashboardPage() {
               />
             ) : (
               <div className="flex flex-col h-full w-full relative">
-                <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-4">Ranked Results</h2>
+                <div className="flex items-center justify-between mb-4 mt-1 shrink-0">
+                  <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest">Ranked Results</h2>
+                  <span className="text-xs font-medium text-white/30">{filteredOpps.length} Results</span>
+                </div>
+                
+                {/* Horizontal Scrolling Filter Tabs */}
+                {opportunities.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-3 mb-2 shrink-0">
+                    {FILTER_TABS.map(tab => (
+                      <button 
+                        key={tab} 
+                        onClick={() => {
+                          setActiveTab(tab);
+                        }}
+                        className={`px-3 py-1 text-xs rounded-full whitespace-nowrap transition-all border ${
+                          activeTab === tab 
+                            ? 'bg-blue-600/20 text-blue-500 border-blue-600/40 font-medium' 
+                            : 'bg-white/5 text-white/50 border-white/5 hover:text-white/80 hover:bg-white/10'
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 
                 {opportunities.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-white/30 text-sm">
@@ -142,16 +178,20 @@ export default function DashboardPage() {
                     Waiting for ingestion stream...
                   </div>
                 ) : (
-                  <div ref={listRef} className="flex flex-col pb-20">
-                    {opportunities.map((opp) => (
-                      <div key={opp.id} className="opp-card-wrapper relative z-10 hover:z-20">
-                        <OpportunityCard
-                          opportunity={opp}
-                          isSelected={selectedOppId === opp.id}
-                          onClick={() => setSelectedOppId(opp.id)}
-                        />
-                      </div>
-                    ))}
+                  <div ref={listRef} key={activeTab} className="flex flex-col pb-20 overflow-y-auto pr-1">
+                    {filteredOpps.length === 0 ? (
+                      <div className="flex-1 flex justify-center text-white/40 text-xs mt-10">No matching opportunities found for this filter.</div>
+                    ) : (
+                      filteredOpps.map((opp) => (
+                        <div key={opp.id} className="opp-card-wrapper relative z-10 hover:z-20">
+                          <OpportunityCard
+                            opportunity={opp}
+                            isSelected={selectedOppId === opp.id}
+                            onClick={() => setSelectedOppId(opp.id)}
+                          />
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </div>

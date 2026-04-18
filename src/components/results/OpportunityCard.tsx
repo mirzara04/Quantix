@@ -31,18 +31,18 @@ export default function OpportunityCard({ opportunity, isSelected, onClick }: Pr
         
         {/* Ranking Badge */}
         <div className={`absolute top-5 right-5 flex flex-col items-end`}>
-          <span className={`text-xl font-bold tracking-tighter ${opportunity.score > 80 ? 'text-amber-500' : 'text-blue-500'}`}>
+          <span className={`text-xl font-bold tracking-tighter ${opportunity.score > 80 ? 'text-blue-500' : 'text-blue-500'}`}>
             {opportunity.score}%
           </span>
           <span className="text-[10px] uppercase tracking-widest text-white/30 font-medium">Match</span>
         </div>
       </div>
 
-      {/* Evidence Snippet */}
+      {/* Evidence Snippet (Why Box) */}
       {opportunity.rank_reason && (
-        <div className="mt-3 mb-4 text-xs text-white/60 bg-white/5 border border-white/5 p-2.5 rounded-md leading-relaxed border-l-2 border-l-blue-500/50">
-          <span className="font-medium text-white/80 mr-1">Why:</span>
-          {opportunity.rank_reason}
+        <div className="mt-3 mb-4 text-xs text-white/80 bg-[#0a0a0a] border border-[#2563eb] p-3 rounded-md leading-relaxed shadow-[0_0_10px_rgba(37,99,235,0.05)]">
+          <span className="font-semibold text-white mr-1">Why:</span>
+          {opportunity.rank_reason.replace(`Match: ${opportunity.score}% — `, '')}
         </div>
       )}
 
