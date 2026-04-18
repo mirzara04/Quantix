@@ -14,6 +14,8 @@ const OpportunitySchema = z.object({
   requires_financial_need: z.boolean().describe('Whether financial need is required for this opportunity'),
   location: z.string().describe('Location or "Remote" or "Any"'),
   description: z.string().describe('2-3 sentence summary of the opportunity'),
+  apply_link: z.string().nullable().describe('Application URL or email address, or null if not found'),
+  required_documents: z.array(z.string()).describe('List of documents required to apply, e.g. ["Transcript", "Recommendation Letter", "SOP"]'),
   source_text: z.string().describe('The most critical 3-4 lines from the email containing deadline, stipend, and eligibility info'),
   is_spam: z.boolean().describe('True if this is a promotional/spam/scam email unrelated to educational opportunities'),
 });

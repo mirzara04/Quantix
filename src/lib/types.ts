@@ -22,10 +22,14 @@ export interface Opportunity {
   requires_financial_need: boolean;
   location: string;
   description: string;
+  apply_link: string | null;
+  required_documents: string[];
   source_text: string;
   evidence_markers: EvidenceMarker[];
   score: number;
   score_breakdown: ScoreBreakdown;
+  rank_reason: string;
+  eligibility_gap: string | null;
   is_eligible: boolean;
   is_spam: boolean;
   status: 'pending' | 'processing' | 'complete' | 'error';
@@ -43,10 +47,12 @@ export interface ScoreBreakdown {
   urgency: number;
   fit: number;
   status: number;
+  completeness: number;
   total: number;
   urgency_reason?: string;
   fit_reason?: string;
   status_reason?: string;
+  completeness_reason?: string;
 }
 
 export interface ExtractedOpportunityJSON {
@@ -61,6 +67,8 @@ export interface ExtractedOpportunityJSON {
   location?: string;
   description: string;
   source_text: string;
+  apply_link?: string | null;
+  required_documents?: string[];
   is_spam: boolean;
 }
 

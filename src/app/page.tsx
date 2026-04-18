@@ -48,12 +48,16 @@ function scoreAndSortOpportunities(
         score: 0,
         score_breakdown: { urgency: 0, fit: 0, status: 0, total: 0 },
         is_eligible: false,
+        rank_reason: 'Filtered as spam',
+        eligibility_gap: null,
         evidence_markers: [],
+        apply_link: raw.apply_link ?? null,
+        required_documents: raw.required_documents ?? [],
         status: 'complete' as const,
       } as Opportunity;
     }
 
-    const { score, breakdown, is_eligible } = calculateScore(extracted, profile);
+    const { score, breakdown, is_eligible, rank_reason, eligibility_gap } = calculateScore(extracted, profile);
 
     return {
       ...raw,
@@ -61,7 +65,11 @@ function scoreAndSortOpportunities(
       score,
       score_breakdown: breakdown,
       is_eligible,
+      rank_reason,
+      eligibility_gap: eligibility_gap ?? null,
       evidence_markers: [],
+      apply_link: raw.apply_link ?? null,
+      required_documents: raw.required_documents ?? [],
       status: 'complete' as const,
     } as Opportunity;
   });
