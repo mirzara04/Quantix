@@ -7,6 +7,8 @@ export interface StudentProfile {
   skills: string[];
   financial_need: boolean;
   location_preference: string;
+  past_experience?: string;
+  preferred_types?: string[];
 }
 
 export interface Opportunity {

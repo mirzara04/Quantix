@@ -1,234 +1,170 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Opportunity, StudentProfile, ActiveField } from '@/lib/types';
-import { calculateScore } from '@/lib/calculateScore';
+import { useState, useRef } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { Opportunity, StudentProfile } from '@/lib/types';
 import { DEMO_PROFILE, DEMO_EMAIL_TEXT, DEMO_OPPORTUNITIES } from '@/lib/demoData';
-import Header from '@/components/layout/Header';
+import { calculateScore } from '@/lib/calculateScore';
+
+import Navbar from '@/components/layout/Navbar';
+import DashboardGrid from '@/components/layout/DashboardGrid';
 import ProfileSidebar from '@/components/profile/ProfileSidebar';
 import ProfileModal from '@/components/profile/ProfileModal';
-import EmailPane from '@/components/dashboard/EmailPane';
-import OpportunitiesPane from '@/components/dashboard/OpportunitiesPane';
-import PackageModal from '@/components/dashboard/PackageModal';
+import EmailInput from '@/components/inbox/EmailInput';
+import OpportunityCard from '@/components/results/OpportunityCard';
+import ActionCenter from '@/components/checklist/ActionCenter';
+import LoadingScreen from '@/components/layout/LoadingScreen';
 
-const DEFAULT_PROFILE: StudentProfile = {
-  name: 'Your Name',
-  degree: 'B.Tech Computer Science',
-  semester: 6,
-  cgpa: 7.5,
-  skills: ['Python', 'JavaScript', 'React'],
-  financial_need: false,
-  location_preference: 'Remote',
-};
+gsap.registerPlugin(useGSAP);
 
-function scoreAndSortOpportunities(
-  rawOpportunities: Omit<Opportunity, 'id' | 'score' | 'score_breakdown' | 'is_eligible' | 'evidence_markers'>[],
-  profile: StudentProfile
-): Opportunity[] {
-  return rawOpportunities.map((raw, idx) => {
-    const extracted = {
-      title: raw.title,
-      organization: raw.organization,
-      type: raw.type,
-      deadline: raw.deadline,
-      stipend: raw.stipend,
-      min_cgpa: raw.min_cgpa,
-      keywords: raw.keywords,
-      requires_financial_need: raw.requires_financial_need,
-      location: raw.location,
-      description: raw.description,
-      source_text: raw.source_text,
-      is_spam: raw.is_spam,
-    };
-
+function scoreAndSort(opps: Opportunity[], profile: StudentProfile) {
+  return opps.map(raw => {
     if (raw.is_spam) {
-      return {
-        ...raw,
-        id: `opp-${idx}-${Date.now()}`,
-        score: 0,
-        score_breakdown: { urgency: 0, fit: 0, status: 0, total: 0 },
-        is_eligible: false,
-        rank_reason: 'Filtered as spam',
-        eligibility_gap: null,
-        evidence_markers: [],
-        apply_link: raw.apply_link ?? null,
-        required_documents: raw.required_documents ?? [],
-        status: 'complete' as const,
-      } as Opportunity;
+      return { ...raw, score: 0 };
     }
-
-    const { score, breakdown, is_eligible, rank_reason, eligibility_gap } = calculateScore(extracted, profile);
-
+    const { score, breakdown, is_eligible, rank_reason } = calculateScore(raw, profile);
     return {
       ...raw,
-      id: `opp-${idx}-${Date.now()}`,
       score,
       score_breakdown: breakdown,
       is_eligible,
-      rank_reason,
-      eligibility_gap: eligibility_gap ?? null,
-      evidence_markers: [],
-      apply_link: raw.apply_link ?? null,
-      required_documents: raw.required_documents ?? [],
-      status: 'complete' as const,
-    } as Opportunity;
-  });
+      rank_reason
+    };
+  }).sort((a, b) => b.score - a.score).filter(o => !o.is_spam);
 }
 
 export default function DashboardPage() {
-  const [profile, setProfile] = useState<StudentProfile>(DEFAULT_PROFILE);
-  const [emailText, setEmailText] = useState('');
+  const [isAppLoaded, setIsAppLoaded] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  
+  const [profile, setProfile] = useState<StudentProfile>(DEMO_PROFILE);
+  const [emailText, setEmailText] = useState(DEMO_EMAIL_TEXT);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isExtracting, setIsExtracting] = useState(false);
-  const [activeField, setActiveField] = useState<ActiveField>(null);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [packageTarget, setPackageTarget] = useState<Opportunity | null>(null);
-  const [isDemoMode, setIsDemoMode] = useState(false);
-  const [extractError, setExtractError] = useState<string | null>(null);
+  const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
 
-  const handleExtract = useCallback(async () => {
-    if (!emailText.trim() || isExtracting) return;
-    setIsExtracting(true);
-    setExtractError(null);
-    setActiveField(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mainDashRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-    try {
-      const res = await fetch('/api/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailText }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setExtractError(data.error || 'Extraction failed');
-        return;
-      }
-
-      const scored = scoreAndSortOpportunities(data.opportunities, profile);
-      setOpportunities(scored);
-      setIsDemoMode(false);
-    } catch {
-      setExtractError('Network error — check your connection');
-    } finally {
-      setIsExtracting(false);
+  // Intro fade-in when loading screen finishes
+  useGSAP(() => {
+    if (isAppLoaded && mainDashRef.current) {
+      gsap.fromTo(mainDashRef.current, 
+        { opacity: 0 }, 
+        { opacity: 1, duration: 0.8, ease: "power2.out" }
+      );
     }
-  }, [emailText, isExtracting, profile]);
+  }, [isAppLoaded]);
 
-  const handleDemoMode = useCallback(() => {
-    setEmailText(DEMO_EMAIL_TEXT);
-    const scored = scoreAndSortOpportunities(
-      DEMO_OPPORTUNITIES.map((o) => ({
-        ...o,
-        source_text: o.source_text,
-      })),
-      DEMO_PROFILE
-    );
-    setOpportunities(scored);
-    setProfile(DEMO_PROFILE);
-    setIsDemoMode(true);
-    setActiveField(null);
-    setExtractError(null);
-  }, []);
+  // GSAP Stagger Entrance for Ranked Opportunities
+  useGSAP(() => {
+    if (opportunities.length > 0 && !selectedOppId && listRef.current) {
+      const cards = gsap.utils.toArray('.opp-card-wrapper');
+      gsap.fromTo(cards, 
+        { y: 30, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.6,
+          stagger: 0.05,
+          ease: "power3.out",
+          clearProps: "all" 
+        }
+      );
+    }
+  }, [opportunities, selectedOppId]);
 
-  const handleProfileSave = useCallback(
-    (updated: StudentProfile) => {
-      setProfile(updated);
-      if (opportunities.length > 0) {
-        const rescored = scoreAndSortOpportunities(
-          opportunities.map((o) => ({
-            title: o.title,
-            organization: o.organization,
-            type: o.type,
-            deadline: o.deadline,
-            stipend: o.stipend,
-            min_cgpa: o.min_cgpa,
-            keywords: o.keywords,
-            requires_financial_need: o.requires_financial_need,
-            location: o.location,
-            description: o.description,
-            source_text: o.source_text,
-            is_spam: o.is_spam,
-            batch_id: o.batch_id,
-            created_at: o.created_at,
-            status: o.status,
-          })),
-          updated
-        );
-        setOpportunities(rescored);
-      }
-    },
-    [opportunities]
-  );
+  const handleScan = () => {
+    setIsExtracting(true);
+    setTimeout(() => {
+      const scored = scoreAndSort(DEMO_OPPORTUNITIES as Opportunity[], profile);
+      setOpportunities(scored);
+      setIsExtracting(false);
+      setSelectedOppId(null);
+    }, 1500);
+  };
 
-  const handleFieldClick = useCallback((opportunityId: string, field: string) => {
-    setActiveField((prev) =>
-      prev?.opportunityId === opportunityId && prev?.field === field
-        ? null
-        : { opportunityId, field }
-    );
-  }, []);
+  const handleSaveProfile = (updated: StudentProfile) => {
+    setProfile(updated);
+    // Real-time recalculation if opportunities exist
+    if (opportunities.length > 0) {
+      const rescored = scoreAndSort(opportunities, updated);
+      setOpportunities(rescored);
+    }
+  };
+
+  const selectedOpp = opportunities.find(o => o.id === selectedOppId);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#050505]">
-      <Header
-        onDemoMode={handleDemoMode}
-        onProfileOpen={() => setProfileModalOpen(true)}
-        profileName={profile.name}
-        isDemoMode={isDemoMode}
-      />
-
-      <div className="flex flex-1 overflow-hidden max-w-screen-2xl mx-auto w-full px-4 sm:px-6 py-4 gap-4">
-        {/* Left sidebar */}
-        <aside className="hidden lg:flex flex-col w-56 xl:w-64 shrink-0 gap-4">
-          <ProfileSidebar profile={profile} onEdit={() => setProfileModalOpen(true)} />
-        </aside>
-
-        {/* Email pane */}
-        <div className="flex flex-col flex-1 min-w-0 relative">
-          {extractError && (
-            <div className="mb-3 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300 flex items-center justify-between">
-              <span>{extractError}</span>
-              <button onClick={() => setExtractError(null)} className="ml-4 text-red-400 hover:text-red-200">✕</button>
-            </div>
-          )}
-          <EmailPane
-            emailText={emailText}
-            onEmailChange={setEmailText}
-            onExtract={handleExtract}
-            isExtracting={isExtracting}
-            activeField={activeField}
-            opportunities={opportunities}
-          />
-        </div>
-
-        {/* Opportunities pane */}
-        <div className="flex flex-col w-80 xl:w-96 shrink-0">
-          <OpportunitiesPane
-            opportunities={opportunities}
-            isExtracting={isExtracting}
-            activeField={activeField}
-            profile={profile}
-            onFieldClick={handleFieldClick}
-            onPreparePackage={setPackageTarget}
-          />
-        </div>
-      </div>
-
-      {profileModalOpen && (
-        <ProfileModal
-          profile={profile}
-          onSave={handleProfileSave}
-          onClose={() => setProfileModalOpen(false)}
-        />
+    <div ref={containerRef} className="flex flex-col h-screen bg-[#000000] overflow-hidden text-slate-200 selection:bg-blue-500/30 relative">
+      
+      {!isAppLoaded && (
+        <LoadingScreen onComplete={() => setIsAppLoaded(true)} />
       )}
 
-      {packageTarget && (
-        <PackageModal
-          opportunity={packageTarget}
-          profile={profile}
-          onClose={() => setPackageTarget(null)}
+      {/* Main app rendered behind/faded in after load */}
+      <div 
+        ref={mainDashRef} 
+        className="flex flex-col h-full w-full"
+        style={{ opacity: 0 }}
+      >
+        <Navbar onOpenProfile={() => setIsProfileModalOpen(true)} />
+        
+        <DashboardGrid
+          left={
+            <ProfileSidebar profile={profile} onEdit={() => setIsProfileModalOpen(true)} />
+          }
+          center={
+            <EmailInput 
+              value={emailText} 
+              onChange={setEmailText} 
+              onScan={handleScan} 
+              isScanning={isExtracting} 
+            />
+          }
+          right={
+            selectedOpp ? (
+              <ActionCenter 
+                opportunity={selectedOpp} 
+                onBack={() => setSelectedOppId(null)} 
+              />
+            ) : (
+              <div className="flex flex-col h-full w-full relative">
+                <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest mb-4">Ranked Results</h2>
+                
+                {opportunities.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-white/30 text-sm">
+                    <div className="w-16 h-16 rounded-full border border-white/5 bg-white/5 flex items-center justify-center mb-4">
+                      <div className="w-8 h-8 border-2 border-transparent border-t-blue-500 rounded-full animate-spin opacity-50" />
+                    </div>
+                    Waiting for ingestion stream...
+                  </div>
+                ) : (
+                  <div ref={listRef} className="flex flex-col pb-20">
+                    {opportunities.map((opp) => (
+                      <div key={opp.id} className="opp-card-wrapper relative z-10 hover:z-20">
+                        <OpportunityCard
+                          opportunity={opp}
+                          isSelected={selectedOppId === opp.id}
+                          onClick={() => setSelectedOppId(opp.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          }
+        />
+      </div>
+
+      {isProfileModalOpen && (
+        <ProfileModal 
+          profile={profile} 
+          onSave={handleSaveProfile} 
+          onClose={() => setIsProfileModalOpen(false)} 
         />
       )}
     </div>
