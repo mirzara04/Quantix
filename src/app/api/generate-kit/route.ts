@@ -9,15 +9,40 @@ const KitSchema = z.object({
   document_checklist: z.array(z.string()).describe('Step-by-step action plan and document checklist items'),
 });
 
+const KitRequestSchema = z.object({
+  opportunity: z.object({
+    title: z.string(),
+    organization: z.string(),
+    type: z.string(),
+    deadline: z.string().nullable().optional(),
+    stipend: z.string().optional(),
+    min_cgpa: z.number().optional(),
+    keywords: z.array(z.string()).optional(),
+    requires_financial_need: z.boolean().optional(),
+    description: z.string(),
+  }),
+  profile: z.object({
+    name: z.string(),
+    degree: z.string(),
+    semester: z.number(),
+    cgpa: z.number(),
+    skills: z.array(z.string()),
+    financial_need: z.boolean().optional(),
+    location_preference: z.string(),
+  }),
+});
+
 export async function POST(req: NextRequest) {
   try {
-    const { opportunity, profile } = await req.json();
-
-    if (!opportunity || !profile) {
+    const body = KitRequestSchema.safeParse(await req.json());
+    if (!body.success) {
       return NextResponse.json({ error: 'Missing opportunity or profile' }, { status: 400 });
     }
 
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    const { opportunity, profile } = body.data;
+    const profileSkills = Array.isArray(profile.skills) ? profile.skills : [];
+
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
       return NextResponse.json(
         { error: 'Gemini API key not configured' },
@@ -35,6 +60,7 @@ STUDENT PROFILE:
 - Degree: ${profile.degree}, Semester ${profile.semester}
 - CGPA: ${profile.cgpa}/10.0
 - Skills: ${profile.skills.join(', ')}
+- Skills: ${profileSkills.length > 0 ? profileSkills.join(', ') : 'None specified'}
 - Financial Need: ${profile.financial_need ? 'Yes' : 'No'}
 - Location Preference: ${profile.location_preference}
 
@@ -57,7 +83,7 @@ Generate:
 
     return NextResponse.json(object);
   } catch (error) {
-    console.error('Kit generation error:', error);
+    console.error('Kit generation error:', error instanceof Error ? error.message : 'unknown error');
     const message = error instanceof Error ? error.message : 'Generation failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

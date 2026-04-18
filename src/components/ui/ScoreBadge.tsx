@@ -23,7 +23,7 @@ export default function ScoreBadge({ score, size = 'md', showLabel = false }: Sc
     <div className="flex flex-col items-end gap-0.5">
       <span
         className={cn(
-          'rounded-full border font-bold text-center tabular-nums',
+          'rounded-full border font-semibold text-center tabular-nums shadow-sm',
           getScoreBg(score),
           getScoreColor(score),
           sizeClasses[size],
@@ -33,7 +33,7 @@ export default function ScoreBadge({ score, size = 'md', showLabel = false }: Sc
         {score}
       </span>
       {showLabel && (
-        <span className={cn('text-xs font-medium', getScoreColor(score))}>
+        <span className={cn('text-[11px] font-medium tracking-tight', getScoreColor(score))}>
           {getScoreLabel(score)}
         </span>
       )}

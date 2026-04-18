@@ -122,20 +122,20 @@ CREATE POLICY "Public read student profiles"
   TO anon, authenticated
   USING (true);
 
-CREATE POLICY "Public insert student profiles"
+CREATE POLICY "Authenticated insert student profiles"
   ON student_profiles FOR INSERT
-  TO anon, authenticated
+  TO authenticated
   WITH CHECK (true);
 
-CREATE POLICY "Public update student profiles"
+CREATE POLICY "Authenticated update student profiles"
   ON student_profiles FOR UPDATE
-  TO anon, authenticated
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY "Public delete student profiles"
+CREATE POLICY "Authenticated delete student profiles"
   ON student_profiles FOR DELETE
-  TO anon, authenticated
+  TO authenticated
   USING (true);
 
 CREATE POLICY "Public read email batches"
@@ -143,14 +143,14 @@ CREATE POLICY "Public read email batches"
   TO anon, authenticated
   USING (true);
 
-CREATE POLICY "Public insert email batches"
+CREATE POLICY "Authenticated insert email batches"
   ON email_batches FOR INSERT
-  TO anon, authenticated
+  TO authenticated
   WITH CHECK (true);
 
-CREATE POLICY "Public update email batches"
+CREATE POLICY "Authenticated update email batches"
   ON email_batches FOR UPDATE
-  TO anon, authenticated
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 
@@ -159,20 +159,20 @@ CREATE POLICY "Public read opportunities"
   TO anon, authenticated
   USING (true);
 
-CREATE POLICY "Public insert opportunities"
+CREATE POLICY "Authenticated insert opportunities"
   ON opportunities FOR INSERT
-  TO anon, authenticated
+  TO authenticated
   WITH CHECK (true);
 
-CREATE POLICY "Public update opportunities"
+CREATE POLICY "Authenticated update opportunities"
   ON opportunities FOR UPDATE
-  TO anon, authenticated
+  TO authenticated
   USING (true)
   WITH CHECK (true);
 
-CREATE POLICY "Public delete opportunities"
+CREATE POLICY "Authenticated delete opportunities"
   ON opportunities FOR DELETE
-  TO anon, authenticated
+  TO authenticated
   USING (true);
 
 CREATE POLICY "Public read generated packages"
@@ -180,12 +180,15 @@ CREATE POLICY "Public read generated packages"
   TO anon, authenticated
   USING (true);
 
-CREATE POLICY "Public insert generated packages"
+CREATE POLICY "Authenticated insert generated packages"
   ON generated_packages FOR INSERT
-  TO anon, authenticated
+  TO authenticated
   WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS idx_opportunities_batch_id ON opportunities(batch_id);
 CREATE INDEX IF NOT EXISTS idx_opportunities_score ON opportunities(score DESC);
 CREATE INDEX IF NOT EXISTS idx_opportunities_deadline ON opportunities(deadline);
+CREATE INDEX IF NOT EXISTS idx_opportunities_type ON opportunities(type);
+CREATE INDEX IF NOT EXISTS idx_opportunities_is_eligible ON opportunities(is_eligible);
+CREATE INDEX IF NOT EXISTS idx_opportunities_is_spam ON opportunities(is_spam);
 CREATE INDEX IF NOT EXISTS idx_generated_packages_opportunity_id ON generated_packages(opportunity_id);

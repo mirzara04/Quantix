@@ -1,10 +1,17 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Manrope, Space_Grotesk } from 'next/font/google';
+import type { ReactNode } from 'react';
 import './globals.css';
 
-const inter = Inter({
+const bodyFont = Manrope({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-body',
+  display: 'swap',
+});
+
+const displayFont = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-display',
   display: 'swap',
 });
 
@@ -16,11 +23,11 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} h-full`}>
-      <body className="min-h-full bg-[#050505] text-slate-200 antialiased">
+    <html lang="en" className={`${bodyFont.variable} ${displayFont.variable} h-full`}>
+      <body className="min-h-full text-slate-100 antialiased">
         {children}
       </body>
     </html>

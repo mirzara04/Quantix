@@ -10,11 +10,26 @@ export const DEFAULT_WEIGHTS = {
 
 export type ScoringWeights = typeof DEFAULT_WEIGHTS;
 
+export function normalizeWeights(weights: ScoringWeights): ScoringWeights {
+  const sum = weights.urgency + weights.fit + weights.status + weights.completeness;
+  if (sum <= 0) {
+    return { ...DEFAULT_WEIGHTS };
+  }
+
+  return {
+    urgency: weights.urgency / sum,
+    fit: weights.fit / sum,
+    status: weights.status / sum,
+    completeness: weights.completeness / sum,
+  };
+}
+
 export function calculateScore(
   extracted: ExtractedOpportunityJSON,
   profile: StudentProfile,
   weights: ScoringWeights = DEFAULT_WEIGHTS
 ): { score: number; breakdown: ScoreBreakdown; is_eligible: boolean; rank_reason: string; eligibility_gap: string | null } {
+  const normalizedWeights = normalizeWeights(weights);
   const minCgpa = extracted.min_cgpa ?? 0;
   const is_eligible = profile.cgpa >= minCgpa;
 
@@ -123,10 +138,10 @@ export function calculateScore(
 
   // --- Weighted total ---
   const total = Math.round(
-    urgencyScore * weights.urgency +
-    fitScore * weights.fit +
-    statusScore * weights.status +
-    completenessScore * weights.completeness
+    urgencyScore * normalizedWeights.urgency +
+    fitScore * normalizedWeights.fit +
+    statusScore * normalizedWeights.status +
+    completenessScore * normalizedWeights.completeness
   );
 
   // --- Plain-English rank reason ---

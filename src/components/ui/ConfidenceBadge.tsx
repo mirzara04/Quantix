@@ -22,7 +22,7 @@ export default function ConfidenceBadge({ completeness, showLabel = true }: Conf
   const { label, Icon, classes } = config;
 
   return (
-    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold', classes)}>
+    <span className={cn('inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold', classes)}>
       <Icon className="w-2.5 h-2.5" />
       {showLabel ? label : `${completeness}%`}
     </span>

@@ -24,15 +24,27 @@ const ExtractionResultSchema = z.object({
   opportunities: z.array(OpportunitySchema),
 });
 
+const ExtractRequestSchema = z.object({
+  emailText: z.string().trim().min(1).max(50000),
+});
+
 export async function POST(req: NextRequest) {
   try {
-    const { emailText } = await req.json();
-
-    if (!emailText?.trim()) {
-      return NextResponse.json({ error: 'No email text provided' }, { status: 400 });
+    let data: unknown;
+    try {
+      data = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Malformed JSON' }, { status: 400 });
     }
 
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    const body = ExtractRequestSchema.safeParse(data);
+    if (!body.success) {
+      return NextResponse.json({ error: 'No email text provided or payload is invalid' }, { status: 400 });
+    }
+
+    const { emailText } = body.data;
+
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
     if (!apiKey || apiKey === 'your_gemini_api_key_here') {
       return NextResponse.json(
         { error: 'Gemini API key not configured. Please add GOOGLE_GENERATIVE_AI_API_KEY to .env.local' },
@@ -63,7 +75,7 @@ Extract every opportunity you find. Include spam emails as single entries with i
 
     return NextResponse.json({ opportunities: object.opportunities });
   } catch (error) {
-    console.error('Extraction error:', error);
+    console.error('Extraction error:', error instanceof Error ? error.message : 'unknown error');
     const message = error instanceof Error ? error.message : 'Extraction failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }

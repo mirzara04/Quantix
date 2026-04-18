@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react';
 import {
   Clock, MapPin, DollarSign, GraduationCap, Tag,
-  Sparkles, AlertTriangle, Ban, ChevronDown, ChevronUp,
-  ExternalLink, FileText, Info, TrendingUp
+  Sparkles, AlertTriangle, Ban, ExternalLink, FileText, Info, TrendingUp
 } from 'lucide-react';
-import { Opportunity, ActiveField } from '@/lib/types';
+import { Opportunity, ActiveField, EvidenceField } from '@/lib/types';
 import { getTypeBadgeColor, getTypeIcon, formatDeadline } from '@/lib/utils';
 import { getScoreColor } from '@/lib/calculateScore';
 import ScoreBadge from '@/components/ui/ScoreBadge';
@@ -16,8 +15,9 @@ import { cn } from '@/lib/utils';
 interface OpportunityCardProps {
   opportunity: Opportunity;
   activeField: ActiveField;
-  onFieldClick: (opportunityId: string, field: string) => void;
+  onFieldClick: (opportunityId: string, field: EvidenceField) => void;
   onPreparePackage: (opportunity: Opportunity) => void;
+  onViewDetails: (opportunity: Opportunity) => void;
 }
 
 function useCountdown(deadline: string | null | undefined) {
@@ -46,7 +46,7 @@ function useCountdown(deadline: string | null | undefined) {
   return { timeLeft, isUrgent };
 }
 
-const FIELD_META: Record<string, { label: string; icon: React.ElementType }> = {
+const FIELD_META: Record<EvidenceField, { label: string; icon: React.ElementType }> = {
   deadline: { label: 'Deadline', icon: Clock },
   stipend: { label: 'Stipend', icon: DollarSign },
   min_cgpa: { label: 'Min CGPA', icon: GraduationCap },
@@ -59,17 +59,42 @@ export default function OpportunityCard({
   activeField,
   onFieldClick,
   onPreparePackage,
+  onViewDetails,
 }: OpportunityCardProps) {
-  const [expanded, setExpanded] = useState(false);
   const { timeLeft, isUrgent } = useCountdown(opportunity.deadline);
 
   if (opportunity.is_spam) {
+    const spamSignals = opportunity.spam_signals && opportunity.spam_signals.length > 0
+      ? opportunity.spam_signals
+      : ['Classified as non-opportunity promotional content'];
+
     return (
-      <div className="glass-panel rounded-xl p-3 border border-red-500/10 opacity-50">
+      <div className="glass-panel rounded-2xl p-3.5 border border-red-500/20 bg-red-500/[0.04]">
         <div className="flex items-center gap-2">
           <Ban className="w-4 h-4 text-red-400 shrink-0" />
-          <span className="text-xs text-red-300 font-medium line-through">{opportunity.title}</span>
-          <span className="ml-auto text-[10px] text-red-400/60 bg-red-500/10 px-2 py-0.5 rounded-full">Spam</span>
+          <span className="text-xs text-red-200 font-semibold line-clamp-1">{opportunity.title}</span>
+          <span className="ml-auto text-[10px] text-red-300 bg-red-500/15 px-2 py-0.5 rounded-full border border-red-500/25">Spam</span>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-red-500/15 bg-red-500/10 p-2.5">
+          <p className="text-[10px] uppercase tracking-wider font-semibold text-red-200">Why flagged as spam</p>
+          <ul className="mt-1.5 space-y-1">
+            {spamSignals.slice(0, 3).map((reason, idx) => (
+              <li key={`${reason}-${idx}`} className="text-[11px] text-red-100/90 leading-relaxed">• {reason}</li>
+            ))}
+          </ul>
+          {opportunity.source_text && (
+            <p className="mt-2 text-[10px] text-red-100/70 line-clamp-2">Evidence: {opportunity.source_text}</p>
+          )}
+        </div>
+
+        <div className="mt-2 flex justify-end">
+          <button
+            onClick={() => onViewDetails(opportunity)}
+            className="rounded-full border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-[11px] font-semibold text-red-100 hover:bg-red-500/16"
+          >
+            View details
+          </button>
         </div>
       </div>
     );
@@ -81,18 +106,19 @@ export default function OpportunityCard({
   return (
     <div
       className={cn(
-        'glass-panel glass-panel-hover rounded-xl border transition-all duration-300 group',
+        'glass-panel glass-panel-hover rounded-2xl border transition-all duration-300 group overflow-hidden',
         !opportunity.is_eligible
           ? 'border-red-500/10 opacity-80'
           : opportunity.score >= 80
-          ? 'border-emerald-500/20 hover:border-emerald-500/40'
+          ? 'border-emerald-500/20 hover:border-emerald-500/35'
           : opportunity.score >= 50
           ? 'border-amber-500/15 hover:border-amber-500/30'
           : 'border-white/5 hover:border-white/10'
       )}
     >
+      <div className={cn('h-1 w-full', opportunity.score >= 80 ? 'bg-emerald-400' : opportunity.score >= 50 ? 'bg-amber-400' : 'bg-orange-400')} />
       <div className="p-4">
-        {/* Header */}
+        {/* Reworked the card layout so the status, score, and evidence cues land before the dense details. */}
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -104,7 +130,7 @@ export default function OpportunityCard({
                 <ConfidenceBadge completeness={opportunity.score_breakdown.completeness} />
               )}
               {isUrgent && timeLeft && timeLeft !== 'Expired' && (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-red-300 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-full animate-pulse">
+                <span className="flex items-center gap-1 text-[10px] font-bold text-red-200 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-full animate-pulse">
                   <Clock className="w-2.5 h-2.5" />
                   {timeLeft}
                 </span>
@@ -119,7 +145,7 @@ export default function OpportunityCard({
             <h3 className="text-sm font-bold text-white leading-snug line-clamp-2 group-hover:text-cyan-100 transition-colors">
               {opportunity.title}
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">{opportunity.organization}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{opportunity.organization}</p>
           </div>
           <div className="shrink-0">
             <ScoreBadge score={opportunity.score} size="md" showLabel />
@@ -149,26 +175,29 @@ export default function OpportunityCard({
             else if (field === 'stipend') value = opportunity.stipend || 'Not specified';
             else if (field === 'min_cgpa') value = opportunity.min_cgpa > 0 ? `${opportunity.min_cgpa}+` : 'Any';
             else if (field === 'location') value = opportunity.location || 'Any';
-            else if (field === 'keywords') value = opportunity.keywords.slice(0, 2).join(', ') || 'General';
+            else if (field === 'keywords') {
+              const keywords = Array.isArray(opportunity.keywords) ? opportunity.keywords : [];
+              value = keywords.slice(0, 2).join(', ') || 'General';
+            }
 
             const active = isActive(field);
             return (
               <button
                 key={field}
-                onClick={() => onFieldClick(opportunity.id, field)}
+                onClick={() => onFieldClick(opportunity.id, field as EvidenceField)}
                 className={cn(
-                  'flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all duration-200',
+                  'flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-left transition-all duration-200 border',
                   active
-                    ? 'bg-yellow-500/15 border border-yellow-500/40 text-yellow-300'
-                    : 'bg-white/3 border border-transparent hover:bg-white/6 hover:border-white/10'
+                    ? 'bg-amber-500/12 border-amber-300/35 text-amber-100'
+                    : 'bg-white/[0.03] border-transparent hover:bg-white/[0.05] hover:border-white/10'
                 )}
               >
-                <Icon className={cn('w-3 h-3 shrink-0', active ? 'text-yellow-400' : 'text-slate-500')} />
+                <Icon className={cn('w-3 h-3 shrink-0', active ? 'text-amber-300' : 'text-slate-500')} />
                 <div className="min-w-0">
-                  <p className={cn('text-[9px] uppercase tracking-wider font-semibold', active ? 'text-yellow-400' : 'text-slate-500')}>
+                  <p className={cn('text-[9px] uppercase tracking-wider font-semibold', active ? 'text-amber-300' : 'text-slate-500')}>
                     {meta.label}
                   </p>
-                  <p className={cn('text-xs font-medium truncate', active ? 'text-yellow-200' : 'text-slate-300')}>
+                  <p className={cn('text-xs font-medium truncate', active ? 'text-amber-50' : 'text-slate-300')}>
                     {value}
                   </p>
                 </div>
@@ -177,77 +206,14 @@ export default function OpportunityCard({
           })}
         </div>
 
-        {/* Expanded section */}
-        {expanded && (
-          <div className="mt-3 space-y-3 border-t border-white/5 pt-3">
-            <p className="text-xs text-slate-400 leading-relaxed">{opportunity.description}</p>
-
-            {opportunity.keywords.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {opportunity.keywords.map((kw) => (
-                  <span key={kw} className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300/80 border border-cyan-500/15">
-                    {kw}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Required documents */}
-            {opportunity.required_documents?.length > 0 && (
-              <div>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <FileText className="w-3 h-3 text-slate-500" />
-                  <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Required Documents</span>
-                </div>
-                <div className="space-y-1">
-                  {opportunity.required_documents.map((doc, i) => (
-                    <div key={i} className="flex items-center gap-2 text-[11px] text-slate-300">
-                      <span className="w-1 h-1 rounded-full bg-slate-500 shrink-0" />
-                      {doc}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Score breakdown */}
-            {opportunity.score_breakdown?.urgency_reason && (
-              <div className="glass-panel rounded-lg p-2.5 space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Score Breakdown</p>
-                {[
-                  { label: 'Urgency (35%)', value: opportunity.score_breakdown.urgency, reason: opportunity.score_breakdown.urgency_reason },
-                  { label: 'Fit (35%)', value: opportunity.score_breakdown.fit, reason: opportunity.score_breakdown.fit_reason },
-                  { label: 'Status (15%)', value: opportunity.score_breakdown.status, reason: opportunity.score_breakdown.status_reason },
-                  { label: 'Completeness (15%)', value: opportunity.score_breakdown.completeness, reason: opportunity.score_breakdown.completeness_reason },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-2">
-                    <span className="text-[10px] text-slate-500 w-20 shrink-0">{item.label}</span>
-                    <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
-                      <div
-                        className={cn('h-full rounded-full transition-all duration-500',
-                          (item.value as number) >= 80 ? 'bg-emerald-500' :
-                          (item.value as number) >= 50 ? 'bg-amber-500' : 'bg-red-500'
-                        )}
-                        style={{ width: `${item.value}%` }}
-                      />
-                    </div>
-                    <span className={cn('text-[10px] font-bold w-6 text-right', getScoreColor(item.value as number))}>
-                      {item.value}
-                    </span>
-                    <span className="text-[10px] text-slate-500 flex-1 truncate">{item.reason as string}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Expanded section - moved to detail modal */}
 
         {/* Action row */}
         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5">
           {opportunity.is_eligible && opportunity.score >= 50 && (
             <button
               onClick={() => onPreparePackage(opportunity)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-r from-cyan-600/80 to-cyan-500/80 hover:from-cyan-500 hover:to-cyan-400 rounded-lg px-3 py-1.5 transition-all duration-200 flex-1 justify-center hover:shadow-md hover:shadow-cyan-500/20"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#ff8a3d,#f97316)] px-3 py-2 text-xs font-semibold text-white transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-orange-500/15"
             >
               <Sparkles className="w-3 h-3" />
               Prepare My Package
@@ -259,7 +225,7 @@ export default function OpportunityCard({
               href={opportunity.apply_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-xs font-semibold text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/25 rounded-lg px-3 py-1.5 transition-all duration-200"
+              className="flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-200 transition-all duration-200 hover:bg-emerald-500/18"
             >
               <ExternalLink className="w-3 h-3" />
               Apply
@@ -267,10 +233,10 @@ export default function OpportunityCard({
           )}
 
           <button
-            onClick={() => setExpanded((e) => !e)}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition-colors ml-auto px-2 py-1.5 rounded-lg hover:bg-white/5"
+            onClick={() => onViewDetails(opportunity)}
+            className="ml-auto flex items-center gap-1 rounded-full px-3 py-2 text-xs text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
           >
-            {expanded ? <><span>Less</span><ChevronUp className="w-3 h-3" /></> : <><span>Details</span><ChevronDown className="w-3 h-3" /></>}
+            Details
           </button>
         </div>
       </div>

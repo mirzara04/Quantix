@@ -32,16 +32,19 @@ export interface Opportunity {
   eligibility_gap: string | null;
   is_eligible: boolean;
   is_spam: boolean;
+  spam_signals?: string[];
   status: 'pending' | 'processing' | 'complete' | 'error';
   created_at?: string;
 }
 
 export interface EvidenceMarker {
-  field: string;
+  field: EvidenceField;
   text: string;
   start: number;
   end: number;
 }
+
+export type EvidenceField = 'deadline' | 'stipend' | 'min_cgpa' | 'location' | 'keywords';
 
 export interface ScoreBreakdown {
   urgency: number;
@@ -80,7 +83,9 @@ export interface GeneratedPackage {
   document_checklist: string[];
 }
 
+export type DeadlineBucket = 'all' | 'overdue' | '0-3d' | '4-7d' | '8-14d' | '15d+';
+
 export type ActiveField = {
   opportunityId: string;
-  field: string;
+  field: EvidenceField;
 } | null;
